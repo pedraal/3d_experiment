@@ -1,6 +1,6 @@
 import type { Character } from './character'
+import { Coin } from './coin'
 import type { Engine } from './engine'
-import { Coin } from './game/coin'
 import { Mapping, type Mappings } from './mapping'
 
 interface MappingDefinition {
