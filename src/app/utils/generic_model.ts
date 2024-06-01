@@ -1,4 +1,4 @@
-import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { type GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { GLTFUtils } from './gltf_utils'
 
 interface Params {

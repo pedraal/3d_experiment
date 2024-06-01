@@ -4,7 +4,7 @@
     "enabled": true
   },
   "files": {
-    "ignore": ["vendor/**/*", "dist/**/*", "node_modules/**/*"]
+    "ignore": ["vendor", "dist", "node_modules", "static"]
   },
   "formatter": {
     "enabled": true,
@@ -25,7 +25,8 @@
   "javascript": {
     "formatter": {
       "semicolons": "asNeeded",
-      "quoteStyle": "single"
+      "quoteStyle": "single",
+      "trailingComma": "all"
     }
   }
 }

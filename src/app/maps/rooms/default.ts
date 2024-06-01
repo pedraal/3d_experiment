@@ -1,4 +1,4 @@
-import { RoomDefinition } from '../../map_parser'
+import type { RoomDefinition } from '../../game_map'
 import { Mappings as M } from '../../mapping'
 
 export const defaultRoom: RoomDefinition['cells'] = [
@@ -39,6 +39,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'south_left',
         mapping: M.wall,
         position: { x: 0, z: -0.5 },
       },
@@ -61,6 +63,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'south_right',
         mapping: M.wall,
         position: { x: 0, z: -0.5 },
       },
@@ -159,6 +163,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'west_left',
         mapping: M.wall,
         position: { x: -0.5, z: 0 },
         orientation: 0.5,
@@ -200,6 +206,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'east_right',
         mapping: M.wall,
         position: { x: 0.5, z: 0 },
         orientation: 0.5,
@@ -273,6 +281,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'west_right',
         mapping: M.wall,
         position: { x: -0.5, z: 0 },
         orientation: 0.5,
@@ -314,6 +324,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'east_left',
         mapping: M.wall,
         position: { x: 0.5, z: 0 },
         orientation: 0.5,
@@ -413,6 +425,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'north_left',
         mapping: M.wall,
         position: { x: 0, z: 0.5 },
       },
@@ -435,6 +449,8 @@ export const defaultRoom: RoomDefinition['cells'] = [
         shape: 'box',
       },
       {
+        mod_type: 'wall',
+        mod_id: 'north_right',
         mapping: M.wall,
         position: { x: 0, z: 0.5 },
       },

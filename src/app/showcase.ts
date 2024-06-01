@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import { MapControls } from './controls/map_controls'
-import { Engine, Params as EngineParams } from './engine'
+import { Engine, type Params as EngineParams } from './engine'
 import { Mapping, Mappings } from './mapping'
 import { State, StateMachine } from './utils/state_machine'
 
@@ -111,6 +111,12 @@ class ShowcaseStateMachine extends StateMachine {
   init() {
     this.addState('loading', LoadingState)
     this.addState('idle', IdleState)
+  }
+
+  setState(name: string) {
+    super.setState(name)
+    const body = document.querySelector<HTMLElement>('body')
+    if (body) body.dataset.gameState = name
   }
 }
 

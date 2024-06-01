@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { PhysicDebuggerModes } from './app/engine'
 import { Game } from './app/game'
 
-new Game({})
+new Game({ engine: { physicsDebugger: PhysicDebuggerModes.Off } })

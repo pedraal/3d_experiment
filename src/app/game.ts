@@ -1,8 +1,8 @@
 import { Character, Characters } from './character'
-import { MapControls } from './controls/map_controls'
+import type { MapControls } from './controls/map_controls'
 import { ThirdPersonControls } from './controls/third_person_controls'
-import { Engine, Params as EngineParams } from './engine'
-import { MapParser } from './map_parser'
+import { Engine, type Params as EngineParams } from './engine'
+import { GameMap } from './game_map'
 import { alphaMap } from './maps/alpha'
 import { State, StateMachine } from './utils/state_machine'
 
@@ -15,7 +15,7 @@ export class Game {
   engine: Engine
   stateMachine: GameStateMachine
   controls: ThirdPersonControls | MapControls
-  map: MapParser
+  map: GameMap
   character: Character
 
   constructor(params: Params) {
@@ -26,18 +26,10 @@ export class Game {
   }
 
   init() {
-    this.initControls()
-    this.initMap()
-  }
-
-  private initControls() {
     this.controls = new ThirdPersonControls({
       engine: this.engine,
     })
-  }
-
-  private initMap() {
-    this.map = new MapParser({ engine: this.engine, definition: alphaMap })
+    this.map = new GameMap({ engine: this.engine, definition: alphaMap })
   }
 
   initCharacter() {
@@ -74,6 +66,13 @@ class GameStateMachine extends StateMachine {
     this.addState('idle', IdleState)
     this.addState('playing', PlayingState)
     this.addState('game-over', GameOverState)
+    this.addState('victory', VictoryState)
+  }
+
+  setState(name: string) {
+    super.setState(name)
+    const body = document.querySelector<HTMLElement>('body')
+    if (body) body.dataset.gameState = name
   }
 }
 
@@ -86,28 +85,27 @@ class LoadingState extends GameState {
 
   enter() {
     this.machine.game.init()
-    this.machine.game.engine.load().then(() => {
+    this.machine.game.engine.load(this.machine.game.map.mappingsSet()).then(() => {
       this.machine.game.engine.init()
       this.machine.game.map.generate()
-      this.machine.game.initCharacter()
 
       this.machine.setState('idle')
       this.machine.game.tick()
     })
   }
 
-  exit() {
-    const loadingEl = document.querySelector<HTMLElement>('#loading')
-    if (loadingEl) loadingEl.style.display = 'none'
-  }
+  exit() {}
 }
 
 class IdleState extends GameState {
   name = 'idle'
 
   enter() {
+    for (const coin of this.machine.game.map.coins) coin.remove()
+    if (this.machine.game.character) this.machine.game.character.remove()
+    this.machine.game.initCharacter()
+
     if (this.startEl) {
-      this.startEl.style.display = 'block'
       this.startEl.addEventListener('click', () => this.machine.setState('playing'))
     }
 
@@ -119,7 +117,6 @@ class IdleState extends GameState {
   exit() {
     if (this.startEl) {
       this.startEl.removeEventListener('click', () => this.machine.setState('playing'))
-      this.startEl.style.display = 'none'
     }
   }
 
@@ -130,7 +127,8 @@ class IdleState extends GameState {
 
 class PlayingState extends GameState {
   name = 'playing'
-  duration = 6000
+  // duration = 0
+  elapsedTime = 0
 
   enter() {
     if (this.machine.game.controls instanceof ThirdPersonControls) {
@@ -140,21 +138,64 @@ class PlayingState extends GameState {
       { ...this.machine.game.map.spawn, y: this.machine.game.map.spawn.y + this.machine.game.character.yHalfExtend },
       true,
     )
+
+    this.machine.game.map.setCoins(this.machine.game.character)
   }
 
   update(deltaTime: number) {
-    this.duration -= deltaTime
+    this.elapsedTime += deltaTime
 
+    if (this.remainingCoins.length === 0) {
+      // if (this.duration <= 0) {
+      //   this.machine.setState('game-over')
+      // }
+
+      this.machine.setState('victory')
+    }
+
+    if (this.remainingCoinsEl) this.remainingCoinsEl.innerText = this.remainingCoins.length.toString()
+    if (this.elapsedTimeEl) this.elapsedTimeEl.innerText = this.elapsedTime.toFixed(2)
+  }
+
+  exit() {
+    if (this.finalElapsedTimeEl) this.finalElapsedTimeEl.innerText = this.elapsedTime.toFixed(2)
+  }
+
+  get remainingCoinsEl() {
+    return document.querySelector<HTMLElement>('#remaining-coins')
+  }
+
+  get elapsedTimeEl() {
+    return document.querySelector<HTMLElement>('#elapsed-time')
+  }
+
+  get finalElapsedTimeEl() {
+    return document.querySelector<HTMLElement>('#final-elapsed-time')
+  }
+
+  get remainingCoins() {
+    return this.machine.game.map.coins
+  }
+}
+
+class GameOverState extends GameState {
+  name = 'game-over'
+  duration = 5
+
+  enter() {}
+
+  update(deltaTime: number) {
+    this.duration -= deltaTime
     if (this.duration <= 0) {
-      this.machine.setState('game-over')
+      this.machine.setState('idle')
     }
   }
 
   exit() {}
 }
 
-class GameOverState extends GameState {
-  name = 'game-over'
+class VictoryState extends GameState {
+  name = 'victory'
   duration = 5
 
   enter() {}

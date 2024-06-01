@@ -1,5 +1,6 @@
+// @ts-expect-error
 import { MapControls as ThreeMapControls } from 'three/examples/jsm/controls/MapControls'
-import { Engine } from '../engine'
+import type { Engine } from '../engine'
 import { BaseKeyboardControls } from './base_keyboard_controls'
 
 export interface Params {
@@ -14,7 +15,7 @@ export class MapControls extends BaseKeyboardControls {
   constructor(params: Params) {
     super(params)
 
-    this.engine.camera.position.set(0, 15, -20)
+    this.engine.camera.position.set(0, 35, -20)
     this.controls = new ThreeMapControls(this.engine.camera, this.engine.canvas)
     this.startListeners()
   }

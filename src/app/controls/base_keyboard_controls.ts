@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { Character } from '../character'
-import { Engine } from '../engine'
+import type { Character } from '../character'
+import type { Engine } from '../engine'
 
 interface Params {
   engine: Engine
@@ -36,7 +36,6 @@ export class BaseKeyboardControls {
   }
 
   assignTarget(target: Character) {}
-  updateCamera() {}
 
   update() {
     this.updateVelocity()

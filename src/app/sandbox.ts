@@ -1,8 +1,8 @@
 import { Character, Characters } from './character'
 import { MapControls } from './controls/map_controls'
 import { ThirdPersonControls } from './controls/third_person_controls'
-import { Engine, Params as EngineParams } from './engine'
-import { MapParser } from './map_parser'
+import { Engine, type Params as EngineParams } from './engine'
+import { GameMap } from './game_map'
 import { alphaMap } from './maps/alpha'
 import { State, StateMachine } from './utils/state_machine'
 
@@ -16,7 +16,7 @@ export class Sandbox {
   engine: Engine
   stateMachine: SandboxStateMachine
   controls: ThirdPersonControls | MapControls
-  map: MapParser
+  map: GameMap
   character: Character
 
   constructor(params: Params) {
@@ -42,7 +42,7 @@ export class Sandbox {
   }
 
   private initMap() {
-    this.map = new MapParser({ engine: this.engine, definition: alphaMap })
+    this.map = new GameMap({ engine: this.engine, definition: alphaMap })
   }
 
   initCharacter() {
@@ -77,6 +77,12 @@ class SandboxStateMachine extends StateMachine {
   init() {
     this.addState('loading', LoadingState)
     this.addState('idle', IdleState)
+  }
+
+  setState(name: string) {
+    super.setState(name)
+    const body = document.querySelector<HTMLElement>('body')
+    if (body) body.dataset.gameState = name
   }
 }
 
@@ -114,5 +120,6 @@ class IdleState extends SandboxStateStateMachine {
       this.machine.sandbox.controls.enable()
     }
     this.machine.sandbox.character.setPosition(this.machine.sandbox.map.spawn)
+    this.machine.sandbox.map.setCoins()
   }
 }

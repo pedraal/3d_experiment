@@ -1,0 +1,85 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  overflow: hidden;
+  background: #111;
+}
+
+.webgl {
+  position: fixed;
+  top: 0;
+  left: 0;
+  outline: none;
+}
+
+.state-text-container {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  color: #fff;
+  font-size: 5rem;
+  padding: 1rem;
+  font-family: sans-serif;
+  z-index: 10;
+  text-align: center;
+}
+
+#start {
+  display: none;
+  position: fixed;
+  bottom: 10vh;
+  left: 0;
+  right: 0;
+  color: white;
+  font-size: 5rem;
+  padding: 1rem;
+  font-family: sans-serif;
+  text-decoration: none;
+  z-index: 10;
+  text-align: center;
+}
+
+body[data-game-state="loading"] #loading {
+  display: flex;
+}
+
+body[data-game-state="idle"] #start {
+  display: block;
+}
+
+#game-stats {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  color: white;
+  font-size: 2rem;
+  padding: 1rem;
+  font-family: sans-serif;
+  z-index: 10;
+}
+
+body[data-game-state="playing"] #game-stats {
+  display: block;
+}
+
+body[data-game-state="game-over"] #game-over {
+  display: flex;
+}
+
+body[data-game-state="victory"] #victory {
+  display: flex;
+}
+
+a.action {
+  cursor: pointer;
+}

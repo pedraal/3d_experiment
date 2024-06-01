@@ -1,4 +1,4 @@
-import { Engine } from '../engine'
+import type { Engine } from '../engine'
 import { Mapping, Mappings } from '../mapping'
 
 export class GameMap {

@@ -1,5 +1,7 @@
-import { Engine } from './engine'
-import { Mapping, Mappings } from './mapping'
+import type { Character } from './character'
+import type { Engine } from './engine'
+import { Coin } from './game/coin'
+import { Mapping, type Mappings } from './mapping'
 
 interface MappingDefinition {
   mod_type?: string
@@ -22,6 +24,7 @@ export interface MapDefinition {
   cellSize: number
   spawn: { x: number; y: number; z: number }
   rooms: RoomDefinition[]
+  coins: { x: number; y: number; z: number }[]
 }
 
 interface Params {
@@ -29,12 +32,12 @@ interface Params {
   engine: Engine
 }
 
-export class MapParser {
+export class GameMap {
   params: Params
   definition: MapDefinition
   engine: Engine
   spawn: { x: number; y: number; z: number }
-  exit: { x: number; y: number; z: number }
+  coins: Coin[] = []
 
   constructor(params: Params) {
     this.params = params
@@ -46,13 +49,14 @@ export class MapParser {
         acc[cur[0]] = cur[1] * this.definition.cellSize
         return acc
       },
-      {} as MapParser['spawn'],
+      {} as GameMap['spawn'],
     )
+
+    this.coins = []
   }
 
   generate() {
     this.propsIterator((coordinates, prop) => {
-      // if (prop.mapping === Mappings.wall || prop.mapping === Mappings.wall_corner) return
       new Mapping({
         engine: this.engine,
         name: prop.mapping,
@@ -63,8 +67,13 @@ export class MapParser {
         },
         orientation: prop.orientation || 0,
         shape: prop.shape || 'trimesh',
+        obstacle: true,
       })
     })
+  }
+
+  setCoins(character?: Character) {
+    for (const coinPosition of this.definition.coins) new Coin({ map: this, position: coinPosition, character })
   }
 
   mappingsSet() {
@@ -72,6 +81,9 @@ export class MapParser {
     this.propsIterator((_, prop) => {
       mappings.add(prop.mapping)
     })
+
+    for (const coinMapping of Coin.MappingNames) mappings.add(coinMapping)
+
     return mappings
   }
 
@@ -117,14 +129,15 @@ export class MapParser {
     cells: RoomDefinition['cells'],
     type: string,
     id: string | string[],
-    modifier: (mapping: MappingDefinition) => void,
+    modifier: (ctx: { cell: CellDefinition; mapping: MappingDefinition }) => void,
   ) {
     for (const row of cells) {
       for (const cell of row) {
         if (cell) {
-          const mapping = cell.find((definition) => definition.mod_type === type && definition.mod_id === id)
-          if (mapping) {
-            modifier(mapping)
+          for (const mapping of cell.filter(
+            (definition) => definition.mod_type === type && definition.mod_id && id.includes(definition.mod_id),
+          )) {
+            modifier({ cell, mapping })
           }
         }
       }

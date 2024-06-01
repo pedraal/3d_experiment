@@ -1,4 +1,4 @@
-import { RoomDefinition } from '../../map_parser'
+import type { RoomDefinition } from '../../game_map'
 import { Mappings as M } from '../../mapping'
 
 export const vHallway: RoomDefinition['cells'] = [

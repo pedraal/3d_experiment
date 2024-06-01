@@ -1,7 +1,7 @@
-import RAPIER from '@dimforge/rapier3d/rapier'
+import type RAPIER from '@dimforge/rapier3d/rapier'
 import * as THREE from 'three'
-import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { Engine, PhysicDebuggerModes } from './engine'
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { type Engine, PhysicDebuggerModes } from './engine'
 import { GenericModel } from './utils/generic_model'
 import { GLTFUtils } from './utils/gltf_utils'
 
@@ -11,6 +11,7 @@ interface Params {
   position: { x: number; y: number; z: number }
   orientation?: number
   manualUpdate?: boolean
+  obstacle?: boolean
   bodyType?: 'dynamic' | 'fixed' | 'kinematic'
   shape?: 'box' | 'sphere' | 'trimesh' | 'convex'
 }
@@ -34,14 +35,14 @@ export class Mapping extends GenericModel {
 
     const mesh = this.model.scene.children[0].clone(true) as THREE.Mesh
     this.mesh = new THREE.Mesh(mesh.geometry.clone(), mesh.material)
-    // if (this.mesh.material instanceof THREE.Material) {
-    //   this.mesh.material.transparent = true
-    // }
+
+    this.mesh.castShadow = true
     this.mesh.receiveShadow = true
     this.mesh.rotation.y = Math.PI * (this.params.orientation || 0)
-    // this.mesh.geometry = this.mesh.geometry.clone()
+
     this.mesh.geometry.computeBoundingBox()
     this.mesh.geometry.computeBoundingSphere()
+    this.mesh.userData.name = this.params.name
     this.boundingBox = this.mesh.geometry.boundingBox as THREE.Box3
     this.boundingSphere = this.mesh.geometry.boundingSphere as THREE.Sphere
 
@@ -75,22 +76,12 @@ export class Mapping extends GenericModel {
     this.body = this.engine.world.createRigidBody(bodyDesc)
     const colliderDesc = new this.engine.rapier.ColliderDesc(this.colliderShape)
 
-    if (this.shape === 'trimesh') {
-      const centerMassOffset = CustomCenterMass[this.params.name] || { x: 0, y: 0, z: 0 }
-      const center = this.boundingBox.getCenter(new THREE.Vector3())
-      colliderDesc.setMassProperties(
-        1,
-        { x: center.x, y: center.y + centerMassOffset.y, z: center.z },
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 0, w: 1 },
-      )
-    }
-
     if (!colliderDesc) throw new Error(`No colliderDesc for ${this.params.name}`)
     this.collider = this.engine.world.createCollider(colliderDesc, this.body)
 
     if (this.engine.params.physicsDebugger !== PhysicDebuggerModes.Strict) this.engine.scene.add(this.mesh)
     if (!this.params.manualUpdate) this.engine.updatables.push(this)
+    if (this.params.obstacle) this.engine.obstacles.push(this.mesh)
   }
 
   get colliderShape() {
@@ -337,8 +328,4 @@ export enum Mappings {
   wall_window_open_scaffold = 'wall_window_open_scaffold',
   wall_window_open = 'wall_window_open',
   wall = 'wall',
-}
-
-const CustomCenterMass = {
-  // [Mappings.wall_doorway]: { x: 0, y: 1.2, z: 0 },
 }
