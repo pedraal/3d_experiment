@@ -278,7 +278,8 @@ class JumpingState extends CharacterState {
 
     this.machine.character.kinematicController.computeColliderMovement(this.machine.character.collider, this.velocity)
     const collision = this.machine.character.kinematicController.computedCollision(0)
-    if (collision?.translationDeltaApplied.y === 0) {
+    // FIXME better landing detection
+    if (collision && collision.translationDeltaApplied.y > -0.001) {
       this.machine.setState('landing_jump')
     }
 
