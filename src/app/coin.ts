@@ -1,8 +1,8 @@
 import type * as THREE from 'three'
-import type { Character } from '../character'
-import type { Engine } from '../engine'
-import type { GameMap } from '../game_map'
-import { Mapping, Mappings } from '../mapping'
+import type { Character } from './character'
+import type { Engine } from './engine'
+import type { GameMap } from './game_map'
+import { Mapping, Mappings } from './mapping'
 
 interface CoinParams {
   map: GameMap
