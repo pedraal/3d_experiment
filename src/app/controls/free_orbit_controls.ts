@@ -1,5 +1,5 @@
 import { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { Engine } from '../engine'
+import type { Engine } from '../engine'
 import { BaseKeyboardControls } from './base_keyboard_controls'
 
 export interface Params {

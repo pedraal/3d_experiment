@@ -1,15 +1,13 @@
 import { Character, Characters } from './character'
-import { MapControls } from './controls/map_controls'
+import type { MapControls } from './controls/map_controls'
 import { ThirdPersonControls } from './controls/third_person_controls'
-import { Engine, Params as EngineParams } from './engine'
-import { Coins } from './game/coins'
-import { GameMap } from './game/game_map'
-import { Score } from './game/score'
+import { Engine, type Params as EngineParams } from './engine'
+import { GameMap } from './game_map'
+import { alphaMap } from './maps/alpha'
 import { State, StateMachine } from './utils/state_machine'
 
 interface Params {
   engine?: EngineParams
-  controls: 'tps' | 'map'
 }
 
 export class Game {
@@ -19,7 +17,6 @@ export class Game {
   controls: ThirdPersonControls | MapControls
   map: GameMap
   character: Character
-  score: Score
 
   constructor(params: Params) {
     this.params = params
@@ -29,25 +26,10 @@ export class Game {
   }
 
   init() {
-    this.initControls()
-    this.initMap()
-    this.initScore()
-  }
-
-  private initControls() {
-    if (this.params.controls === 'tps')
-      this.controls = new ThirdPersonControls({
-        engine: this.engine,
-      })
-    else if (this.params.controls === 'map') this.controls = new MapControls({ engine: this.engine })
-  }
-
-  private initMap() {
-    this.map = new GameMap(this.engine)
-  }
-
-  private initScore() {
-    this.score = new Score()
+    this.controls = new ThirdPersonControls({
+      engine: this.engine,
+    })
+    this.map = new GameMap({ engine: this.engine, definition: alphaMap })
   }
 
   initCharacter() {
@@ -84,6 +66,13 @@ class GameStateMachine extends StateMachine {
     this.addState('idle', IdleState)
     this.addState('playing', PlayingState)
     this.addState('game-over', GameOverState)
+    this.addState('victory', VictoryState)
+  }
+
+  setState(name: string) {
+    super.setState(name)
+    const body = document.querySelector<HTMLElement>('body')
+    if (body) body.dataset.gameState = name
   }
 }
 
@@ -96,28 +85,27 @@ class LoadingState extends GameState {
 
   enter() {
     this.machine.game.init()
-    this.machine.game.engine.load().then(() => {
+    this.machine.game.engine.load(this.machine.game.map.mappingsSet()).then(() => {
       this.machine.game.engine.init()
       this.machine.game.map.generate()
-      this.machine.game.initCharacter()
 
       this.machine.setState('idle')
       this.machine.game.tick()
     })
   }
 
-  exit() {
-    const loadingEl = document.querySelector<HTMLElement>('#loading')
-    if (loadingEl) loadingEl.style.display = 'none'
-  }
+  exit() {}
 }
 
 class IdleState extends GameState {
   name = 'idle'
 
   enter() {
+    for (const coin of this.machine.game.map.coins) coin.remove()
+    if (this.machine.game.character) this.machine.game.character.remove()
+    this.machine.game.initCharacter()
+
     if (this.startEl) {
-      this.startEl.style.display = 'block'
       this.startEl.addEventListener('click', () => this.machine.setState('playing'))
     }
 
@@ -129,7 +117,6 @@ class IdleState extends GameState {
   exit() {
     if (this.startEl) {
       this.startEl.removeEventListener('click', () => this.machine.setState('playing'))
-      this.startEl.style.display = 'none'
     }
   }
 
@@ -140,11 +127,10 @@ class IdleState extends GameState {
 
 class PlayingState extends GameState {
   name = 'playing'
-  duration = 6000
-  coins: Coins
+  // duration = 0
+  elapsedTime = 0
 
   enter() {
-    this.machine.game.score.reset()
     if (this.machine.game.controls instanceof ThirdPersonControls) {
       this.machine.game.controls.enable()
     }
@@ -152,30 +138,43 @@ class PlayingState extends GameState {
       { ...this.machine.game.map.spawn, y: this.machine.game.map.spawn.y + this.machine.game.character.yHalfExtend },
       true,
     )
-    // this.coins = new Coins(this.machine.game)
-    if (this.playingUiEl) this.playingUiEl.style.display = 'block'
+
+    this.machine.game.map.setCoins(this.machine.game.character)
   }
 
   update(deltaTime: number) {
-    this.duration -= deltaTime
-    if (this.timerEl) this.timerEl.innerHTML = this.duration.toFixed(2)
+    this.elapsedTime += deltaTime
 
-    if (this.duration <= 0) {
-      this.machine.setState('game-over')
+    if (this.remainingCoins.length === 0) {
+      // if (this.duration <= 0) {
+      //   this.machine.setState('game-over')
+      // }
+
+      this.machine.setState('victory')
     }
+
+    if (this.remainingCoinsEl) this.remainingCoinsEl.innerText = this.remainingCoins.length.toString()
+    if (this.elapsedTimeEl) this.elapsedTimeEl.innerText = this.elapsedTime.toFixed(2)
   }
 
   exit() {
-    // this.coins.remove()
-    if (this.playingUiEl) this.playingUiEl.style.display = 'none'
+    if (this.finalElapsedTimeEl) this.finalElapsedTimeEl.innerText = this.elapsedTime.toFixed(2)
   }
 
-  get playingUiEl() {
-    return document.querySelector<HTMLElement>('#playing-ui')
+  get remainingCoinsEl() {
+    return document.querySelector<HTMLElement>('#remaining-coins')
   }
 
-  get timerEl() {
-    return document.querySelector<HTMLElement>('#timer')
+  get elapsedTimeEl() {
+    return document.querySelector<HTMLElement>('#elapsed-time')
+  }
+
+  get finalElapsedTimeEl() {
+    return document.querySelector<HTMLElement>('#final-elapsed-time')
+  }
+
+  get remainingCoins() {
+    return this.machine.game.map.coins
   }
 }
 
@@ -183,9 +182,7 @@ class GameOverState extends GameState {
   name = 'game-over'
   duration = 5
 
-  enter() {
-    if (this.gameOverEl) this.gameOverEl.style.display = 'flex'
-  }
+  enter() {}
 
   update(deltaTime: number) {
     this.duration -= deltaTime
@@ -194,11 +191,21 @@ class GameOverState extends GameState {
     }
   }
 
-  exit() {
-    if (this.gameOverEl) this.gameOverEl.style.display = 'none'
+  exit() {}
+}
+
+class VictoryState extends GameState {
+  name = 'victory'
+  duration = 5
+
+  enter() {}
+
+  update(deltaTime: number) {
+    this.duration -= deltaTime
+    if (this.duration <= 0) {
+      this.machine.setState('idle')
+    }
   }
 
-  get gameOverEl() {
-    return document.querySelector<HTMLElement>('#game-over')
-  }
+  exit() {}
 }

@@ -2,10 +2,4 @@
 import { PhysicDebuggerModes } from './app/engine'
 import { Game } from './app/game'
 
-new Game({
-  engine: {
-    debugUi: import.meta.env.DEV,
-    physicsDebugger: import.meta.env.DEV ? PhysicDebuggerModes.On : PhysicDebuggerModes.Off,
-  },
-  controls: 'tps',
-})
+new Game({ engine: { physicsDebugger: PhysicDebuggerModes.Off } })

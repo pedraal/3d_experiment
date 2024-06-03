@@ -5,7 +5,7 @@ import { Showcase } from '../app/showcase'
 new Showcase({
   engine: {
     debugUi: true,
-    physicsDebugger: PhysicDebuggerModes.On,
+    physicsDebugger: PhysicDebuggerModes.Off,
   },
-  fallingItems: true,
+  fallingItems: false,
 })

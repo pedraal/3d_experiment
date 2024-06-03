@@ -1,6 +1,6 @@
-import RAPIER from '@dimforge/rapier3d/rapier'
+import type RAPIER from '@dimforge/rapier3d/rapier'
 import * as THREE from 'three'
-import { Engine } from '../engine'
+import type { Engine } from '../engine'
 
 export class RapierDebugRenderer {
   engine: Engine

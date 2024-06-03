@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Because why not
 export class GLTFUtils {

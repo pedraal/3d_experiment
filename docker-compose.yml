@@ -13,17 +13,17 @@ services:
       - proxy
     labels:
       - traefik.enable=true
-      - traefik.http.services.3d-game.loadbalancer.server.port=80
+      - traefik.http.services.cld.loadbalancer.server.port=80
 
-      - traefik.http.routers.3d-game.service=3d-game@docker
-      - traefik.http.routers.3d-game.rule=Host(`${APP_DOMAIN}`)
-      - traefik.http.routers.3d-game.entrypoints=web
-      - traefik.http.routers.3d-game.middlewares=redirect-https
+      - traefik.http.routers.cld.service=cld@docker
+      - traefik.http.routers.cld.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.cld.entrypoints=web
+      - traefik.http.routers.cld.middlewares=redirect-https
 
-      - traefik.http.routers.3d-game-secured.service=3d-game@docker
-      - traefik.http.routers.3d-game-secured.entrypoints=web-secured
-      - traefik.http.routers.3d-game-secured.tls=true
-      - traefik.http.routers.3d-game-secured.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.cld-secured.service=cld@docker
+      - traefik.http.routers.cld-secured.entrypoints=web-secured
+      - traefik.http.routers.cld-secured.tls=true
+      - traefik.http.routers.cld-secured.rule=Host(`${APP_DOMAIN}`)
 
 networks:
   proxy:

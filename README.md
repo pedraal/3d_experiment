@@ -13,7 +13,7 @@ This is a work in progress, the following list is not exhaustive and is subject 
 - [x] `Loading` screen
 - [x] `Main Menu` screen
 - [ ] `Game Over` screen
-- [x] Coins gathering
+- [ ] Coins gathering
 - [x] Basic movements (up, down, left, right, jump)
 - [x] Keyboard controls
 - [x] Camera rotation

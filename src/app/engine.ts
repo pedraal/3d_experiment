@@ -1,10 +1,10 @@
-import RAPIER from '@dimforge/rapier3d/rapier'
-import GUI from 'lil-gui'
+import type RAPIER from '@dimforge/rapier3d/rapier'
 import * as THREE from 'three'
+// @ts-expect-error
 import Stats from 'three/examples/jsm/libs/stats.module'
 import { Character } from './character'
-import { Mapping } from './mapping'
-import { Updatable } from './types'
+import { Mapping, type Mappings } from './mapping'
+import type { Updatable } from './types'
 import { RapierDebugRenderer } from './utils/rapier_debug_renderer'
 
 export enum PhysicDebuggerModes {
@@ -15,8 +15,7 @@ export enum PhysicDebuggerModes {
 
 export interface Params {
   physicsDebugger?: PhysicDebuggerModes
-  gridHelper?: boolean
-  axesHelper?: boolean
+  helpers?: boolean
   debugUi?: boolean
 }
 
@@ -28,12 +27,13 @@ export class Engine {
   clock: THREE.Clock
   world: RAPIER.World
   physicsDebugger?: RapierDebugRenderer
-  gui: GUI
   stats: Stats
   previousElapsedTime: number
+  obstacles: THREE.Object3D[]
   updatables: Updatable[]
   camera: THREE.PerspectiveCamera
   rapier: typeof RAPIER
+  grid?: THREE.GridHelper
 
   constructor(params: Params) {
     this.params = params
@@ -43,33 +43,43 @@ export class Engine {
     this.canvas = canvas
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true })
-    this.renderer.setSize(this.viewport.width, this.viewport.height)
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
     this.scene = new THREE.Scene()
-    this.camera = new THREE.PerspectiveCamera(90, this.viewport.width / this.viewport.height, 0.1, 100)
+    this.obstacles = []
+    this.camera = new THREE.PerspectiveCamera(90, this.viewport.width / this.viewport.height, 0.1, 10000)
     this.updatables = []
 
     this.clock = new THREE.Clock()
     this.previousElapsedTime = 0
 
     if (this.params.debugUi) {
-      this.gui = new GUI()
       this.stats = new Stats()
       document.body.appendChild(this.stats.dom)
     }
-    const ambiantLight = new THREE.AmbientLight(0xffffff, 1.5)
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 3)
-    this.scene.add(ambiantLight, directionalLight)
+    const ambiantLight = new THREE.AmbientLight(0xffffff, 3)
+    this.scene.add(ambiantLight)
 
-    if (this.params.gridHelper) this.scene.add(new THREE.GridHelper(100, 100))
-    if (this.params.axesHelper) this.scene.add(new THREE.AxesHelper(10))
+    const pointLight = new THREE.PointLight(0xfc6603, 3, 0, 0)
+    pointLight.position.set(12, 3.75, 25)
+    pointLight.castShadow = true
+    pointLight.shadow.mapSize.width = 2048
+    pointLight.shadow.mapSize.height = 2048
+    pointLight.shadow.camera.far = 200
 
-    window.addEventListener('resize', this.onResize.bind(this))
+    this.scene.add(pointLight)
+    if (this.params.helpers) {
+      this.scene.add(new THREE.PointLightHelper(pointLight, 1))
+      this.grid = new THREE.GridHelper(2000, 2000)
+      this.scene.add(this.grid)
+      this.scene.add(new THREE.AxesHelper(10))
+    }
   }
 
-  load() {
-    return Promise.all([Character.load(), Mapping.load(), this.loadRapier()])
+  load(mappings?: Set<Mappings>) {
+    return Promise.all([Character.load(), Mapping.loadMappings(mappings), this.loadRapier()])
   }
 
   async loadRapier() {
@@ -77,55 +87,44 @@ export class Engine {
   }
 
   init() {
-    this.initPhysics()
-  }
-
-  initPhysics() {
     this.world = new this.rapier.World({ x: 0, y: -9.81, z: 0 })
     if (this.params.physicsDebugger !== PhysicDebuggerModes.Off) this.physicsDebugger = new RapierDebugRenderer(this)
   }
 
-  private onResize() {
-    this.camera.aspect = this.viewport.width / this.viewport.height
-    this.camera.updateProjectionMatrix()
-
-    this.renderer.setSize(this.viewport.width, this.viewport.height)
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  }
-
   tick(update: (deltaTime: number, elapsedTime: number) => void) {
+    this.resizeRendererToDisplaySize()
+
     const elapsedTime = this.clock.getElapsedTime()
     const deltaTime = elapsedTime - this.previousElapsedTime
     this.previousElapsedTime = elapsedTime
 
-    this.updatePhysics()
-    this.updateRenderer(deltaTime, elapsedTime)
-    this.updateDebugUi()
-
-    update(deltaTime, elapsedTime)
-
-    window.requestAnimationFrame(() => this.tick(update))
-  }
-
-  private updatePhysics() {
     this.world.step()
-    this.physicsDebugger?.update()
-  }
-
-  private updateRenderer(deltaTime: number, elapsedTime: number) {
+    if (Math.floor(elapsedTime) % 1 === 0) this.physicsDebugger?.update()
     for (const object of this.updatables) object.update(deltaTime, elapsedTime)
     this.renderer.render(this.scene, this.camera)
-  }
 
-  private updateDebugUi() {
-    if (!this.params.debugUi) return
-    this.stats.update()
+    if (this.params.debugUi) this.stats.update()
+
+    update(deltaTime, elapsedTime)
+    window.requestAnimationFrame(() => this.tick(update))
   }
 
   get viewport() {
     return {
-      width: window.innerWidth,
-      height: window.innerHeight,
+      width: this.canvas.clientWidth,
+      height: this.canvas.clientHeight,
+    }
+  }
+
+  resizeRendererToDisplaySize() {
+    const canvas = this.renderer.domElement
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
+    const needResize = canvas.width !== width || canvas.height !== height
+    if (needResize) {
+      this.renderer.setSize(width, height, false)
+      this.camera.aspect = width / height
+      this.camera.updateProjectionMatrix()
     }
   }
 }

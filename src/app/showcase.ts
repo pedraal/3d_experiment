@@ -1,6 +1,8 @@
-import RAPIER from '@dimforge/rapier3d/rapier'
+import * as THREE from 'three'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import { MapControls } from './controls/map_controls'
-import { Engine, Params as EngineParams } from './engine'
+import { Engine, type Params as EngineParams } from './engine'
 import { Mapping, Mappings } from './mapping'
 import { State, StateMachine } from './utils/state_machine'
 
@@ -9,10 +11,6 @@ interface Params {
   fallingItems?: boolean
 }
 
-let boxBody1: RAPIER.RigidBody
-let boxBody2: RAPIER.RigidBody
-let boxBody3: RAPIER.RigidBody
-let box: Mapping
 export class Showcase {
   params: Params
   engine: Engine
@@ -26,6 +24,7 @@ export class Showcase {
     this.params = params
     this.engine = new Engine(this.params.engine || {})
     this.controls = new MapControls({ engine: this.engine })
+    this.engine.camera.position.set(0, 15, 20)
     this.stateMachine = new ShowcaseStateMachine(this)
     this.stateMachine.setState('loading')
   }
@@ -54,10 +53,22 @@ export class Showcase {
         shape: 'trimesh',
       })
 
+      const text = new THREE.Mesh(
+        new TextGeometry(name, {
+          font: Showcase.font,
+          size: 0.2,
+          height: 0.01,
+        }),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      )
+      text.geometry.center()
+      text.position.set(x, -1, z)
+      this.engine.scene.add(text)
+
       if (this.params.fallingItems)
         new Mapping({
           engine: this.engine,
-          name: currentRowItem % 2 === 0 ? Mappings.Box_A : Mappings.Coin_A,
+          name: Mappings.coin_a,
           position: { x, y: 10, z },
           bodyType: 'dynamic',
           shape: 'box',
@@ -74,42 +85,18 @@ export class Showcase {
     }
   }
 
-  initExperimental() {
-    const floorBody = this.engine.world.createRigidBody(
-      this.engine.rapier.RigidBodyDesc.fixed().setTranslation(0, 0, 0).setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 }),
-    )
-    this.engine.world.createCollider(this.engine.rapier.ColliderDesc.cuboid(5, 0.1, 5), floorBody)
-
-    boxBody1 = this.engine.world.createRigidBody(
-      this.engine.rapier.RigidBodyDesc.kinematicPositionBased().setTranslation(-3, 1.1, -3),
-    )
-    this.engine.world.createCollider(this.engine.rapier.ColliderDesc.cuboid(1, 1, 1), boxBody1)
-
-    boxBody2 = this.engine.world.createRigidBody(
-      this.engine.rapier.RigidBodyDesc.kinematicVelocityBased().setTranslation(3, 1.1, 3).setAngularDamping(50),
-    )
-    this.engine.world.createCollider(this.engine.rapier.ColliderDesc.cuboid(1, 1, 1), boxBody2)
-
-    boxBody3 = this.engine.world.createRigidBody(
-      this.engine.rapier.RigidBodyDesc.dynamic().setTranslation(0, 0, 0).setLinearDamping(0),
-    )
-    this.engine.world.createCollider(this.engine.rapier.ColliderDesc.cuboid(1, 1, 1).setRestitution(0.7), boxBody3)
-    boxBody3.addTorque({ x: 40.0, y: 0.0, z: 0.0 }, true)
-
-    const box = new Mapping({
-      engine: this.engine,
-      name: Mappings.Box_A,
-      position: { x: 0, y: 10, z: 0 },
-      bodyType: 'dynamic',
-      shape: 'trimesh',
-    })
-  }
-
   tick() {
     this.engine.tick((dt, et) => {
       // boxBody1.setAngvel({ x: 0, y: 0, z: 1 }, true)
       // boxBody2.setAngvel({ x: 0, y: 0, z: 2 }, true)
     })
+  }
+
+  static font
+  static async loadFont() {
+    if (Showcase.font) return
+    const loader = new FontLoader()
+    Showcase.font = await loader.loadAsync('/helvetiker_regular.typeface.json')
   }
 }
 
@@ -125,6 +112,12 @@ class ShowcaseStateMachine extends StateMachine {
     this.addState('loading', LoadingState)
     this.addState('idle', IdleState)
   }
+
+  setState(name: string) {
+    super.setState(name)
+    const body = document.querySelector<HTMLElement>('body')
+    if (body) body.dataset.gameState = name
+  }
 }
 
 class ShowcaseStateMachineState extends State {
@@ -135,17 +128,17 @@ class LoadingState extends ShowcaseStateMachineState {
   name = 'loading'
 
   enter() {
-    this.machine.showcase.engine.load().then(() => {
+    Promise.all([Showcase.loadFont(), this.machine.showcase.engine.load()]).then(() => {
       this.machine.showcase.engine.init()
       this.machine.showcase.init()
       this.machine.setState('idle')
+      this.machine.showcase.tick()
     })
   }
 
   exit() {
     const loadingEl = document.querySelector<HTMLElement>('#loading')
     if (loadingEl) loadingEl.style.display = 'none'
-    this.machine.showcase.tick()
   }
 }
 

@@ -1,4 +1,5 @@
-import { Character } from './character'
+import type * as THREE from 'three'
+import type { Character } from './character'
 
 export interface Controls {
   forward: boolean
@@ -9,7 +10,6 @@ export interface Controls {
   velocity: THREE.Vector3
   quaternion: THREE.Quaternion
   assignTarget(target: Character): void
-  updateCamera(): void
 }
 
 export interface Updatable {

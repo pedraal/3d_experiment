@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear the dungeon - MapBuilder</title>
+  <link rel="stylesheet" href="../main.css">
+</head>
+
+<body data-game-state class="w-screen h-screen">
+  <div class="absolute inset-0 grid grid-cols-5 auto-cols-auto">
+    <canvas class="w-full h-full col-span-4"></canvas>
+    <div class="bg-stone-900 text-white p-4 flex flex-col gap-4 overflow-scroll">
+      <div class="flex flex-col gap-1">
+        <label for="mapping">Mapping</label>
+        <select name="mapping" id="mapping" class="bg-transparent border"></select>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./main"></script>
+</body>
+
+</html>

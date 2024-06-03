@@ -19,6 +19,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'src/index.html'),
         showcase: resolve(__dirname, 'src/showcase/index.html'),
+        sandbox: resolve(__dirname, 'src/sandbox/index.html'),
       },
     },
   },

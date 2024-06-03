@@ -1,8 +1,8 @@
-import RAPIER from '@dimforge/rapier3d/rapier'
+import type RAPIER from '@dimforge/rapier3d/rapier'
 import * as THREE from 'three'
-import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { Engine, PhysicDebuggerModes } from './engine'
-import { Controls } from './types'
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { type Engine, PhysicDebuggerModes } from './engine'
+import type { Controls } from './types'
 import { GenericModel } from './utils/generic_model'
 import { GLTFUtils } from './utils/gltf_utils'
 import { State, StateMachine } from './utils/state_machine'
@@ -27,6 +27,8 @@ export class Character extends GenericModel {
   stateMachine: CharacterStateMachine
   yHalfExtend: number
   fallingVelocity: number
+  bodyToMeshYOffset: number
+  bodyRadius: number
 
   constructor(params: Params) {
     super(params)
@@ -36,28 +38,30 @@ export class Character extends GenericModel {
     this.model = GLTFUtils.cloneGltf(Character.gltfs[this.params.name]) as GLTF
 
     this.mesh = this.model.scene
-    this.mesh.receiveShadow = true
+    this.mesh.traverse((node) => {
+      node.castShadow = true
+    })
     this.mesh.rotation.y = Math.PI * (this.params.orientation || 0)
 
     this.yHalfExtend = this.hitbox.getSize(new THREE.Vector3()).y / 2
 
-    this.body = this.engine.world.createRigidBody(
-      this.engine.rapier.RigidBodyDesc.kinematicPositionBased().setTranslation(
-        this.params.position.x,
-        this.params.position.y + this.yHalfExtend,
-        this.params.position.z,
-      ),
+    this.body = this.engine.world.createRigidBody(this.engine.rapier.RigidBodyDesc.kinematicPositionBased())
+
+    this.bodyToMeshYOffset = -0.4
+    this.bodyRadius = 0.35
+
+    const colliderDesc = this.engine.rapier.ColliderDesc.cuboid(
+      this.bodyRadius,
+      this.yHalfExtend + this.bodyToMeshYOffset,
+      this.bodyRadius,
     )
 
-    this.collider = this.engine.world.createCollider(
-      this.engine.rapier.ColliderDesc.capsule(this.yHalfExtend - 0.5, 0.5),
-      this.body,
-    )
+    this.collider = this.engine.world.createCollider(colliderDesc, this.body)
 
-    this.kinematicController = this.engine.world.createCharacterController(0.1)
-    this.kinematicController.enableAutostep(0.7, 0.1, true)
-    this.kinematicController.enableSnapToGround(0.1)
-    this.kinematicController.setSlideEnabled(false)
+    this.kinematicController = this.engine.world.createCharacterController(0)
+    this.kinematicController.enableAutostep(0.5, 0.01, true)
+
+    this.setPosition(this.params.position)
 
     this.fallingVelocity = -5
 
@@ -83,16 +87,24 @@ export class Character extends GenericModel {
     this.engine.updatables.push(this)
   }
 
+  setPosition(position: { x: number; y: number; z: number }) {
+    this.body.setTranslation(
+      {
+        ...position,
+        y: position.y + this.yHalfExtend,
+      },
+      true,
+    )
+  }
+
   update(dt: number, elapsedTime: number) {
     this.mixer.update(dt)
     this.handleMovement(dt)
     this.stateMachine.currentState?.update(dt, elapsedTime)
 
     this.mesh.position.copy(this.body.translation() as unknown as THREE.Vector3)
-    this.mesh.position.y -= this.yHalfExtend
+    this.mesh.position.y -= this.yHalfExtend + this.bodyToMeshYOffset
     this.mesh.quaternion.copy(this.body.rotation() as unknown as THREE.Quaternion)
-
-    this.controls?.updateCamera()
   }
 
   private handleMovement(dt: number) {
@@ -131,6 +143,14 @@ export class Character extends GenericModel {
 
   get hitbox() {
     return new THREE.Box3().setFromObject(this.mesh)
+  }
+
+  remove() {
+    this.engine.world.removeRigidBody(this.body)
+    this.engine.world.removeCollider(this.collider, false)
+    this.engine.world.removeCharacterController(this.kinematicController)
+    this.engine.updatables = this.engine.updatables.filter((u) => u !== this)
+    this.engine.scene.remove(this.mesh)
   }
 
   static async load() {
@@ -240,7 +260,7 @@ class JumpingState extends CharacterState {
   transitionTime = 0.1
   persistedVelocity = { x: 0, y: 0, z: 0 }
   initialVerticalVelocity = 3
-  rawDecelerationRate = 0.12
+  rawDecelerationRate = 10
   deceleleration = 0
   velocity = new THREE.Vector3()
 
@@ -249,7 +269,7 @@ class JumpingState extends CharacterState {
     this.persistedVelocity = this.machine.character.getControlsVelocity().multiplyScalar(1.25)
   }
 
-  update() {
+  update(dt: number) {
     const yVelocity = Math.max(
       this.initialVerticalVelocity - this.deceleleration,
       this.machine.character.fallingVelocity,
@@ -258,11 +278,12 @@ class JumpingState extends CharacterState {
 
     this.machine.character.kinematicController.computeColliderMovement(this.machine.character.collider, this.velocity)
     const collision = this.machine.character.kinematicController.computedCollision(0)
-    if (collision?.translationApplied.y === 0) {
+    // FIXME better landing detection
+    if (collision && collision.translationDeltaApplied.y > -0.001) {
       this.machine.setState('landing_jump')
     }
 
-    this.deceleleration += this.rawDecelerationRate
+    this.deceleleration += this.rawDecelerationRate * dt
   }
 }
 
