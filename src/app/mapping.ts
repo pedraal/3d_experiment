@@ -9,6 +9,7 @@ interface Params {
   engine: Engine
   name: Mappings
   position: { x: number; y: number; z: number }
+  quaternion?: [number, number, number, number]
   orientation?: number
   manualUpdate?: boolean
   obstacle?: boolean
@@ -18,6 +19,7 @@ interface Params {
 
 export class Mapping extends GenericModel {
   params: Params
+  id: string
   engine: Engine
   mesh: THREE.Mesh
   body: RAPIER.RigidBody
@@ -28,6 +30,7 @@ export class Mapping extends GenericModel {
 
   constructor(params: Params) {
     super(params)
+    this.id = window.crypto.randomUUID()
     this.params = params
     this.engine = this.params.engine
 
@@ -35,10 +38,13 @@ export class Mapping extends GenericModel {
 
     const mesh = this.model.scene.children[0].clone(true) as THREE.Mesh
     this.mesh = new THREE.Mesh(mesh.geometry.clone(), mesh.material)
+    this.mesh.position.set(this.params.position.x, this.params.position.y, this.params.position.z)
+    this.mesh.userData = { id: this.id }
 
     this.mesh.castShadow = true
     this.mesh.receiveShadow = true
-    this.mesh.rotation.y = Math.PI * (this.params.orientation || 0)
+    if (params.orientation) this.mesh.rotation.y = Math.PI * (this.params.orientation || 0)
+    if (params.quaternion) this.mesh.quaternion.set(...params.quaternion)
 
     this.mesh.geometry.computeBoundingBox()
     this.mesh.geometry.computeBoundingSphere()
@@ -104,6 +110,7 @@ export class Mapping extends GenericModel {
   }
 
   update() {
+    // if (!this.engine.physics) return
     this.mesh.position.copy(this.body.translation() as unknown as THREE.Vector3)
     this.mesh.quaternion.copy(this.body.rotation() as unknown as THREE.Quaternion)
   }

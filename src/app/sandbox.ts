@@ -108,7 +108,6 @@ class LoadingState extends SandboxStateStateMachine {
   exit() {
     const loadingEl = document.querySelector<HTMLElement>('#loading')
     if (loadingEl) loadingEl.style.display = 'none'
-    this.machine.sandbox.tick()
   }
 }
 

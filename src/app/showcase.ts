@@ -132,13 +132,13 @@ class LoadingState extends ShowcaseStateMachineState {
       this.machine.showcase.engine.init()
       this.machine.showcase.init()
       this.machine.setState('idle')
+      this.machine.showcase.tick()
     })
   }
 
   exit() {
     const loadingEl = document.querySelector<HTMLElement>('#loading')
     if (loadingEl) loadingEl.style.display = 'none'
-    this.machine.showcase.tick()
   }
 }
 

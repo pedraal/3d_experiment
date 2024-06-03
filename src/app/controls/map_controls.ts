@@ -10,7 +10,7 @@ export interface Params {
 export class MapControls extends BaseKeyboardControls {
   params: Params
   engine: Engine
-  controls: ThreeMapControls
+  private controls: ThreeMapControls
 
   constructor(params: Params) {
     super(params)
@@ -18,6 +18,10 @@ export class MapControls extends BaseKeyboardControls {
     this.engine.camera.position.set(0, 35, -20)
     this.controls = new ThreeMapControls(this.engine.camera, this.engine.canvas)
     this.startListeners()
+  }
+
+  set enabled(value: boolean) {
+    this.controls.enabled = value
   }
 
   update() {

@@ -33,6 +33,7 @@ export class Engine {
   updatables: Updatable[]
   camera: THREE.PerspectiveCamera
   rapier: typeof RAPIER
+  grid?: THREE.GridHelper
 
   constructor(params: Params) {
     this.params = params
@@ -44,7 +45,6 @@ export class Engine {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true })
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    this.renderer.setSize(this.viewport.width, this.viewport.height)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
     this.scene = new THREE.Scene()
@@ -72,17 +72,10 @@ export class Engine {
     this.scene.add(pointLight)
     if (this.params.helpers) {
       this.scene.add(new THREE.PointLightHelper(pointLight, 1))
-      this.scene.add(new THREE.GridHelper(2000, 2000))
+      this.grid = new THREE.GridHelper(2000, 2000)
+      this.scene.add(this.grid)
       this.scene.add(new THREE.AxesHelper(10))
     }
-
-    window.addEventListener('resize', () => {
-      this.camera.aspect = this.viewport.width / this.viewport.height
-      this.camera.updateProjectionMatrix()
-
-      this.renderer.setSize(this.viewport.width, this.viewport.height)
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    })
   }
 
   load(mappings?: Set<Mappings>) {
@@ -99,6 +92,8 @@ export class Engine {
   }
 
   tick(update: (deltaTime: number, elapsedTime: number) => void) {
+    this.resizeRendererToDisplaySize()
+
     const elapsedTime = this.clock.getElapsedTime()
     const deltaTime = elapsedTime - this.previousElapsedTime
     this.previousElapsedTime = elapsedTime
@@ -116,8 +111,20 @@ export class Engine {
 
   get viewport() {
     return {
-      width: window.innerWidth,
-      height: window.innerHeight,
+      width: this.canvas.clientWidth,
+      height: this.canvas.clientHeight,
+    }
+  }
+
+  resizeRendererToDisplaySize() {
+    const canvas = this.renderer.domElement
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
+    const needResize = canvas.width !== width || canvas.height !== height
+    if (needResize) {
+      this.renderer.setSize(width, height, false)
+      this.camera.aspect = width / height
+      this.camera.updateProjectionMatrix()
     }
   }
 }
